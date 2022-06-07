@@ -4,6 +4,9 @@ import com.movie.moviecatalogservice.models.CatalogItem;
 import com.movie.moviecatalogservice.models.Movie;
 import com.movie.moviecatalogservice.models.Rating;
 import com.movie.moviecatalogservice.models.UserRating;
+import com.movie.moviecatalogservice.services.CatalogItemService;
+import com.movie.moviecatalogservice.services.RatingService;
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -12,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -20,16 +24,18 @@ import java.util.stream.Collectors;
 public class MoviveCatalogResource {
 
     @Autowired
-    private RestTemplate restTemplate;
+    private RatingService ratingService;
+
+    @Autowired
+    private CatalogItemService catalogItemService;
 
     @GetMapping("/{userId}")
-    public List<CatalogItem> getMovivesCatalog(@PathVariable("userId") String userId) {
+    public List<CatalogItem> getCatalog(@PathVariable("userId") String userId) {
 
-        List<Rating> ratings = restTemplate.getForObject("http://RATING-DATA-SERVICE/ratingsdata/foo", UserRating.class).getRatings();
+        List<Rating> ratings = this.ratingService.getRatings(userId);
 
         return ratings.stream().map((rating) -> {
-            Movie movie = restTemplate.getForObject("http://MOVIE-INFO-SERVICE/movies/" + rating.getMovieId(), Movie.class);
-            return new CatalogItem(movie.getName(), "Movie Desc", rating.getRating());
+            return this.catalogItemService.getCatalogItem(rating);
         })
         .collect(Collectors.toList());
     }
